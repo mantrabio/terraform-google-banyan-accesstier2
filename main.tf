@@ -1,5 +1,5 @@
 resource "google_compute_region_health_check" "backend_service_loadbalancer_health_check" {
-  name                = "${var.name}-at-backend-svc-lb-hc"
+  name                = "${var.project}-at-backend-svc-lb-hc"
   check_interval_sec  = 5
   timeout_sec         = 5
   healthy_threshold   = 2
@@ -18,7 +18,7 @@ locals {
 }
 
 resource "google_compute_region_backend_service" "accesstier" {
-  name                  = "${var.name}-at-backend-svc"
+  name                  = "${var.project}-at-backend-svc"
   health_checks         = [google_compute_region_health_check.backend_service_loadbalancer_health_check.id]
   load_balancing_scheme = "EXTERNAL"
   protocol              = "TCP"
@@ -29,7 +29,7 @@ resource "google_compute_region_backend_service" "accesstier" {
 }
 
 resource "google_compute_forwarding_rule" "accesstier" {
-  name                  = "${var.name}-at-backend-svc-forwarding-rule"
+  name                  = "${var.project}-at-backend-svc-forwarding-rule"
   region                = var.region
   ip_protocol           = "TCP"
   load_balancing_scheme = "EXTERNAL"
@@ -40,7 +40,7 @@ resource "google_compute_forwarding_rule" "accesstier" {
 
 
 resource "google_compute_region_autoscaler" "accesstier" {
-  name   = "${var.name}-at-rigm-autoscaler"
+  name   = "${var.project}-at-rigm-autoscaler"
   target = google_compute_region_instance_group_manager.accesstier_rigm.id
 
   region = var.region
@@ -54,9 +54,9 @@ resource "google_compute_region_autoscaler" "accesstier" {
 }
 
 resource "google_compute_region_instance_group_manager" "accesstier_rigm" {
-  name = "${var.name}-at-rigm"
+  name = "${var.project}-at-rigm"
 
-  base_instance_name = "${var.name}-accesstier"
+  base_instance_name = "${var.project}-accesstier"
   region             = var.region
   version {
     instance_template = google_compute_instance_template.accesstier_template.id
@@ -78,7 +78,7 @@ resource "google_compute_region_instance_group_manager" "accesstier_rigm" {
 
 
 resource "google_compute_health_check" "accesstier_health_check" {
-  name                = "${var.name}-at-autohealing-hc"
+  name                = "${var.project}-at-autohealing-hc"
   check_interval_sec  = 30
   timeout_sec         = 5
   healthy_threshold   = 2
@@ -91,7 +91,7 @@ resource "google_compute_health_check" "accesstier_health_check" {
 }
 
 resource "google_compute_instance_template" "accesstier_template" {
-  name_prefix = "${var.name}-at-template-"
+  name_prefix = "${var.project}-at-template-"
   description = "This template is used for access tiers"
 
   tags         = setunion(google_compute_firewall.accesstier_ports.target_tags, google_compute_firewall.accesstier_ssh.target_tags, google_compute_firewall.healthcheck.target_tags, google_compute_firewall.accesstier_ports_tunnel.target_tags, var.tags)
@@ -143,9 +143,9 @@ resource "google_compute_instance_template" "accesstier_template" {
 }
 
 resource "google_compute_firewall" "accesstier_ssh" {
-  name          = "${var.name}-accesstier-ssh"
+  name          = "${var.project}-accesstier-ssh"
   network       = data.google_compute_network.accesstier_network.name
-  target_tags   = ["${var.name}-accesstier-ssh"]
+  target_tags   = ["${var.project}-accesstier-ssh"]
   source_ranges = var.management_cidrs
   allow {
     protocol = "tcp"
@@ -154,9 +154,9 @@ resource "google_compute_firewall" "accesstier_ssh" {
 }
 
 resource "google_compute_firewall" "accesstier_ports" {
-  name          = "${var.name}-accesstier-ports"
+  name          = "${var.project}-accesstier-ports"
   network       = data.google_compute_network.accesstier_network.name
-  target_tags   = ["${var.name}-accesstier-ports"]
+  target_tags   = ["${var.project}-accesstier-ports"]
   source_ranges = ["0.0.0.0/0"]
   allow {
     protocol = "tcp"
@@ -165,9 +165,9 @@ resource "google_compute_firewall" "accesstier_ports" {
 }
 
 resource "google_compute_firewall" "accesstier_ports_tunnel" {
-  name          = "${var.name}-accesstier-ports-tunnel"
+  name          = "${var.project}-accesstier-ports-tunnel"
   network       = data.google_compute_network.accesstier_network.name
-  target_tags   = ["${var.name}-accesstier-ports-tunnel"]
+  target_tags   = ["${var.project}-accesstier-ports-tunnel"]
   source_ranges = ["0.0.0.0/0"]
   allow {
     protocol = "udp"
@@ -177,9 +177,9 @@ resource "google_compute_firewall" "accesstier_ports_tunnel" {
 
 // Allow access to the healthcheck
 resource "google_compute_firewall" "healthcheck" {
-  name          = "${var.name}-accesstier-healthcheck"
+  name          = "${var.project}-accesstier-healthcheck"
   network       = data.google_compute_network.accesstier_network.name
-  target_tags   = ["${var.name}-accesstier-healthcheck"]
+  target_tags   = ["${var.project}-accesstier-healthcheck"]
   source_ranges = local.healthcheck_prober_ip_ranges
   allow {
     protocol = "tcp"
@@ -203,7 +203,7 @@ data "google_compute_subnetwork" "accesstier_subnet" {
 }
 
 resource "google_compute_address" "external" {
-  name         = "${var.name}-ip-address-at-backend-svc"
+  name         = "${var.project}-ip-address-at-backend-svc"
   region       = var.region
   address_type = "EXTERNAL"
 }
