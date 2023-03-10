@@ -1,3 +1,9 @@
+# Start Custom Mantra Bio code
+data "local_file" "mantrabio_ca" {
+  filename = "${path.module}/mantrabio-root-ca.crt"
+}
+
+# End Custom Mantra Bio code
 resource "google_compute_region_health_check" "backend_service_loadbalancer_health_check" {
   name                = "${var.project}-at-backend-svc-lb-hc"
   check_interval_sec  = 5
@@ -127,6 +133,10 @@ resource "google_compute_instance_template" "accesstier_template" {
     "echo '262144' > /proc/sys/net/netfilter/nf_conntrack_max \n",
     "# Setting up an iptables DNAT to fix google's UDP load balancers DSR implementation, which forward the traffic with an untranslated destination \n",
     "apt-get update \n",
+    "# Need to trust the mantrabio-ca certificate to enable TLS",
+    "apt-get install ca-certificates -y",
+    "echo \"${data.local_file.mantrabio_ca.content}\" > /usr/local/share/ca-certificates/mantrabio-root-ca.crt",
+    "update-ca-certificates",
     "export DEBIAN_FRONTEND=noninteractive; apt-get -y install iptables-persistent && echo 'iptables persistent installed' \n",
     "iptables -t nat -I PREROUTING -p udp --dport ${var.tunnel_port} -j DNAT --to-destination $(hostname -i) && echo 'DNAT rule applied' \n",
     "echo 'installing Netagent' \n",
